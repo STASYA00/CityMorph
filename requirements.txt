@@ -1,0 +1,5 @@
+geopandas
+numpy
+opencv-python
+pandas
+shapely
