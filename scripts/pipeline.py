@@ -10,7 +10,7 @@ from metrics import Metric, CMetric, ClusterNumberMetric, MinimumClusterDistance
 	MetricFactory, ProcessMetricFactory
 from polygon import Reader, Collection, Footprint, Iteration, Uniter, Shifter
 from visualizer import Visualizer
-from writer import JsonWriter
+from writer import JsonWriter, CsvWriter
 
 
 class Pipeline:
@@ -174,7 +174,7 @@ if __name__ == '__main__':
 	m_pipe = MetricsPipeline(FILE)
 	result = m_pipe.run(collection, initial_collection=collection)
 
-	writer = JsonWriter(filename=FILE.split('.')[0])
+	writer = CsvWriter(filename=FILE.split('.')[0])
 	writer.add("{}".format(0), result)
 
 	# v = Visualizer(collection, name='{}_iter'.format(n)).visualize()

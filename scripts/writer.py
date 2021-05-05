@@ -1,4 +1,5 @@
 import json
+import os
 import pandas as pd
 import sys
 
@@ -74,44 +75,40 @@ class JsonWriter(Writer):
 
 
 class CsvWriter:
-	def __init__(self, features, name='result'):
-		assert isinstance(name, str), "Expected name to be str, got {}".format(name)
+	def __init__(self, filename='result', features=[]):
+		assert isinstance(filename, str), "Expected name to be str, got {}".format(filename)
 
-		self.name = name
+		self.filename = filename
 		self.features = features
-		if self.name + '.csv' in os.listdir():
-			self.csv = pd.read_csv(self.name + '.csv', index_col=0)
+		self.content = {}
+		if self.filename + '.csv' in os.listdir():
+			self.csv = pd.read_csv(self.filename + '.csv', index_col=0)
 			self.csv = self.csv.to_dict(orient='list')
 		else:
 			self.csv = {}
 			self.reset()
-			df = pd.DataFrame(self.csv)
-			df.to_csv(self.name + '.csv', mode='a')
-			print('csv saved as {}.csv'.format(self.name))
+			self.csv = pd.DataFrame(self.csv)
+			self.csv.to_csv(self.filename + '.csv', mode='w')
+			print('csv saved as {}.csv'.format(self.filename))
 
 	def add(self, instance, result):
 		if self._check(result):
 			for _feature in list(result.keys()):
 				if _feature not in list(self.csv.keys()):
 					return ValueError
-			if isinstance(instance, str):
-				if instance not in self.csv['name']:
-					self.csv['name'].append(instance)
-					for feature in list(self.csv.keys()):
-						if feature != 'name':
-							if feature in list(result.keys()):
-								self.csv[feature].append(result[feature])
-							else:
-								self.csv[feature].append(0)
-			else:
-				return ValueError
+			self.content[instance] = result
+
+			result = {key: [value] for key, value in result.items()}
+
+			_df = pd.DataFrame.from_dict(result)
+			self.csv = self.csv.append(_df, ignore_index=True)
 
 	def _check(self, result):
 		return len(list(result.keys())) == len(self.features)
 
 	def save(self):
 		df = pd.DataFrame(self.csv)
-		df.to_csv(self.name + '.csv', mode='a', header=False)
+		df.to_csv(self.filename + '.csv', mode='a', header=False)
 
 	def reset(self):
 		self.csv = {}

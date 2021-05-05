@@ -18,7 +18,9 @@ class MetricFactory:
 		             'area_ratio': AreaRatioMetric,
 		             'minimum_cluster_distance': MinimumClusterDistanceMetric,
 		             'clusters_at_distance': ClustersAtDistanceMetric,
-		             'clusters_at_percent_distance': ClustersAtPercentDistanceMetric
+		             'clusters_at_percent_distance': ClustersAtPercentDistanceMetric,
+		             'distance_matrix_mean': DistanceMatrixMediaMetric,
+		             'distance_matrix_sum': DistanceMatrixSumMetric
 		             }
 
 	def produce(self, metric: str):
@@ -115,9 +117,10 @@ class TotalAreaMetric(Metric):
 	def _calculate(self, collection: Collection, **args):
 		if not isinstance(collection.class_type, Footprint.__class__):
 			raise AttributeError
+		hull = args['hull']
 		area = 0
 		for footprint in collection:
-			area += footprint.polygon.area
+			area += footprint.polygon.intersection(hull).area
 		return area
 
 
@@ -150,13 +153,46 @@ class DistanceMatrixMetric(Metric):
 		return distance_matrix.tolist()
 
 
+class DistanceMatrixSumMetric(Metric):
+	def __init__(self, name: str='distance_matrix_sum'):
+		Metric.__init__(self, name)
+
+	def _calculate(self, collection: Collection, **args):
+		if not isinstance(collection.class_type, Footprint.__class__):
+			raise AttributeError
+		distance_matrix = np.zeros((len(collection), len(collection)))
+		for i, footprint in enumerate(collection.collection):
+			for j, footprint1 in enumerate(collection.collection):
+				if j > i:
+					distance_matrix[i][j] = footprint.polygon.centroid.distance(footprint1.polygon.centroid)
+
+		return np.sum(distance_matrix)
+
+
+class DistanceMatrixMediaMetric(Metric):
+	def __init__(self, name: str='distance_matrix_mean'):
+		Metric.__init__(self, name)
+
+	def _calculate(self, collection: Collection, **args):
+		if not isinstance(collection.class_type, Footprint.__class__):
+			raise AttributeError
+		distance_matrix = np.zeros((len(collection), len(collection)))
+		for i, footprint in enumerate(collection.collection):
+			for j, footprint1 in enumerate(collection.collection):
+				if j > i:
+					distance_matrix[i][j] = footprint.polygon.centroid.distance(footprint1.polygon.centroid)
+
+		return np.mean(distance_matrix)
+
+
 class HindexMetric(Metric):
 	def __init__(self, name: str='hindex'):
 		Metric.__init__(self, name)
 
-	def _calculate(self, collection: Collection, initial_collection: Collection):
+	def _calculate(self, collection: Collection, **args):
 		if not isinstance(collection.class_type, Footprint.__class__):
 			raise AttributeError
+		initial_collection = args['initial_collection']
 		result = {}
 		for i, footprint in enumerate(collection.collection):
 			result[i] = 0
@@ -164,7 +200,13 @@ class HindexMetric(Metric):
 				if footprint.polygon.intersects(footprint1.polygon) or \
 						footprint1.polygon.within(footprint.polygon):
 					result[i] += 1
-		return result
+
+		# result = {cluster1: n elements, cluster2: n elements}
+		values = np.array(list(result.values()))
+		values = np.array(np.unique(values, return_counts=True))[:, ::-1]
+		for v in values[0]:
+			if v <= np.sum(values[1][:list(values[0]).index(v)]):
+				return v
 
 
 class AreaRatioMetric(Metric):
@@ -175,10 +217,11 @@ class AreaRatioMetric(Metric):
 		if not isinstance(collection.class_type, Footprint.__class__):
 			raise AttributeError
 		result = {}
-		_hull = MultiPolygon([x.polygon for x in collection]).convex_hull
+		# _hull = MultiPolygon([x.polygon for x in collection]).convex_hull
+		hull = args['hull']
 
 		for i, footprint in enumerate(collection.collection):
-			result[i] = footprint.polygon.area / _hull.area
+			result[i] = footprint.polygon.area / hull.area
 		return result
 
 
@@ -310,6 +353,8 @@ class IterMaxClusterVariationMetric(CMetric):
 	def _calculate(self, result: dict, **args):
 		_result = []
 		_prev_values = 0
+		iter = 0
+
 		for iter, values in result.items():
 			if int(iter) > 0:
 				_result.append(self._get(_prev_values, values, args['field']))

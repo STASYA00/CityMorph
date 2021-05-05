@@ -1,0 +1,2 @@
+,iter,cluster_number_xy,total_area_xy,cluster_number_total_sum,total_area_total_sum,cluster_number_total_nr_sum,total_area_total_nr_sum,cluster_number_max_variation,total_area_max_variation,cluster_number_iter_max_variation,total_area_iter_max_variation,cluster_number_clusters_reduction_distance,total_area_clusters_reduction_distance
+0,,9.0,0.0,337.0,3758529.0,337.0,3758529.0,18.0,0.0,1.0,11.0,"[10, 12]",[]
