@@ -2,6 +2,10 @@
 
 Welcome to the CityMorph project! This is a framework intended for the calculation of urban metrics of a city zone.
 
+<p align="center">
+  <img src="imgs/illustration.gif" width="600"/>
+</p>
+
 The framework evaluates an urban area based on a set of metrics. The building footprints represent *clusters* that grow in size using a defined increment value (1m) for a number of iterations. When two clusters intersect each other in this growth process, a unique cluster is formed from these two. The iterations continue until one unique cluster is formed.
 
 Urban metrics that are currently supported:
