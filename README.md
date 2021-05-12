@@ -11,6 +11,7 @@ The framework evaluates an urban area based on a set of metrics. The building fo
 Urban metrics that are currently supported:
 
 * Number of clusters
+* D-limit
 * Total area of all the clusters
 * Total perimeter of all the clusters
 * Distance matrix - a table with the distances between all the clusters pair-wise
@@ -43,7 +44,11 @@ There are two ways of using the script.
 
 ```
 pip install -r requirements.txt
-python run.py PATH_TO_YOUR_SHAPEFILE.shp [--vis]
+python run.py PATH_TO_YOUR_SHAPEFILE.shp PATH_TO_YOUR_GRID_SHAPEFILE [--vis]
+```
+test example:
+```
+python run.py grid_test/A020102_Buildings_Units.shp grid_test/GRID_800-600_MI_COM.shp
 ```
 
 --vis flag activates the visualization function, so that the images on all the iterations are stored to the ```vis``` folder.
