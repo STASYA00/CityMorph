@@ -10,17 +10,18 @@ from polygon import Collection, Footprint
 class MetricFactory:
 	def __init__(self):
 		self.dict = {'cluster_number': ClusterNumberMetric,
-		             'd1': D1Metric,
+		             'Dlimit': DlimitMetric,
 		             'total_area': TotalAreaMetric,
 		             'total_perimeter': TotalPerimeterMetric,
 		             'distance_matrix': DistanceMatrixMetric,
 		             'hindex': HindexMetric,
 		             'area_ratio': AreaRatioMetric,
+		             'area_ratio_cell': AreaRatioCellMetric,
 		             'minimum_cluster_distance': MinimumClusterDistanceMetric,
 		             'clusters_at_distance': ClustersAtDistanceMetric,
 		             'clusters_at_percent_distance': ClustersAtPercentDistanceMetric,
 		             'distance_matrix_mean': DistanceMatrixMediaMetric,
-		             'distance_matrix_sum': DistanceMatrixSumMetric
+		             'distance_matrix_sum': DistanceMatrixSumMetric,
 		             }
 
 	def produce(self, metric: str):
@@ -69,8 +70,8 @@ class ClusterNumberMetric(Metric):
 		return len(collection)
 
 
-class D1Metric(Metric):
-	def __init__(self, name: str='d1'):
+class DlimitMetric(Metric):
+	def __init__(self, name: str='Dlimit'):
 		Metric.__init__(self, name)
 
 	def _calculate(self, collection: Collection, **args):
@@ -107,6 +108,8 @@ class MinimumClusterDistanceMetric(Metric):
 				if j > i:
 					min_dist = min(min_dist, element.polygon.distance(
 						element1.polygon))
+		if min_dist == 10000000:
+			min_dist = 0
 		return min_dist
 
 
@@ -207,6 +210,7 @@ class HindexMetric(Metric):
 		for v in values[0]:
 			if v <= np.sum(values[1][:list(values[0]).index(v)]):
 				return v
+		return 1
 
 
 class AreaRatioMetric(Metric):
@@ -221,8 +225,27 @@ class AreaRatioMetric(Metric):
 		hull = args['hull']
 
 		for i, footprint in enumerate(collection.collection):
-			result[i] = footprint.polygon.area / hull.area
-		return result
+			result[i] = footprint.polygon.intersection(hull).area / hull.area
+		return np.sum(list(result.values()))
+
+
+class AreaRatioCellMetric(Metric):
+	def __init__(self, name: str='area_ratio_cell'):
+		Metric.__init__(self, name)
+
+	def _calculate(self, collection: Collection, **args):
+		if not isinstance(collection.class_type, Footprint.__class__):
+			raise AttributeError
+		result = {}
+		# _hull = MultiPolygon([x.polygon for x in collection]).convex_hull
+		if 'sample' in list(args.keys()):
+			hull = args['sample']
+		else:
+			hull = args['hull']
+
+		for i, footprint in enumerate(collection.collection):
+			result[i] = footprint.polygon.intersection(hull).area / hull.area
+		return np.sum(list(result.values()))
 
 
 class ClustersAtDistanceMetric(Metric):
@@ -251,7 +274,7 @@ class ClustersAtPercentDistanceMetric(Metric):
 		if not isinstance(collection.class_type, Footprint.__class__):
 			raise AttributeError
 		result = 0
-		distance = D1Metric().calculate(args['initial_collection'])
+		distance = DlimitMetric().calculate(args['initial_collection'])
 		for i, footprint in enumerate(collection.collection):
 			for j, footprint1 in enumerate(collection.collection):
 				if j > i:

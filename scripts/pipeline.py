@@ -1,11 +1,13 @@
 import argparse
 import geopandas as gpd
 import pandas as pd
+from shapely.geometry import MultiPolygon
 import sys
 import textwrap
 
 sys.path.append('scripts/')
 from config import METRICS, CANVAS, PROCESS_METRICS
+from grid import Grid, CellCalculator
 from metrics import Metric, CMetric, ClusterNumberMetric, MinimumClusterDistanceMetric, \
 	MetricFactory, ProcessMetricFactory
 from polygon import Reader, Collection, Footprint, Iteration, Uniter, Shifter
@@ -124,6 +126,83 @@ class IterPipeline(Pipeline):
 		if collection is None:
 			collection = CollectionPipeline(self.filename).run()
 		return Iteration(collection, self.value).make()
+
+
+class GridPipeline(Pipeline):
+	"""
+	Pipeline that makes one iteration of growth on a given value.
+	Returns a new Collection.
+	"""
+	def __init__(self, filename, value=0):
+		Pipeline.__init__(self)
+		self.filename = filename
+		self.value = value
+
+	def run(self, shapefile=None):
+		return self._run(shapefile)
+
+	def _run(self, shapefile):
+		_grid = Grid(shapefile)
+		_cellcalc = CellCalculator(_grid)
+		buildings = Reader().read(self.filename)
+		for i in range(len(_grid.grid)):
+			_collection, _cell = _cellcalc.get(buildings, i)
+			if len(_collection) > 0:
+				print('LEN', len(_collection))
+				MainPipeline(filename='{}'.format(i)).run(collection =_collection, sample=_cell)
+				print('Iteration {} finished executing'.format(i))
+
+
+class MainPipeline(Pipeline):
+	def __init__(self, filename, value=0):
+		Pipeline.__init__(self)
+		self.filename = filename
+		self.value = value
+
+	def run(self, collection=None,**args):
+		return self._run(collection, **args)
+
+	def _run(self, collection, **args):
+		# print(collection)
+		# if len(collection) < 1:
+		# 	collection = CollectionPipeline(self.filename).run()
+		sample = None
+		if 'sample' in list(args.keys()):
+			sample = args['sample']
+		hull = MultiPolygon(
+			[x.polygon for x in collection.collection]).convex_hull
+		m_pipe = MetricsPipeline(self.filename)
+		result = m_pipe.run(collection, initial_collection=collection,
+		                    hull=hull, sample=sample)
+
+		writer = CsvWriter(filename='result/' + self.filename.split('.')[0], features=METRICS)
+		writer.add("{}".format(0), result)
+
+		# v = Visualizer(collection, name='{}_iter'.format(n)).visualize()
+		n_clusters = 100
+		i = 1
+		while n_clusters != 1:
+			_collection = IterPipeline(self.filename, i).run(collection)
+			result = m_pipe.run(_collection, initial_collection=collection,
+			                    hull=hull)
+			n_clusters = result['cluster_number']
+			print('Number of clusters:    {}'.format(n_clusters))
+			writer.add(i, result)
+			if self.value:
+				v = Visualizer(_collection,
+				               name='{}_iter'.format(i)).visualize()
+				del v
+			del _collection
+			del result
+			i += 1
+		writer.save()
+		process_writer = CsvWriter(filename='result/{}_process'.format(self.filename.split('.')[0]),
+		                           features=['{}_{}'.format(y, x) for x in
+		                                     PROCESS_METRICS for y in
+		                                     ['cluster_number', 'total_area']])
+		process_pipe = ProcessMetricsPipeline(self.filename).run(writer.content)
+		process_writer.add('whole', process_pipe)
+		process_writer.save()
 
 
 class TestPipeline(Pipeline):

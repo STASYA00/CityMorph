@@ -83,7 +83,7 @@ class CsvWriter:
 		self.content = {}
 		if self.filename + '.csv' in os.listdir():
 			self.csv = pd.read_csv(self.filename + '.csv', index_col=0)
-			self.csv = self.csv.to_dict(orient='list')
+			# self.csv = self.csv.to_dict(orient='list')
 		else:
 			self.csv = {}
 			self.reset()
@@ -112,7 +112,7 @@ class CsvWriter:
 
 	def reset(self):
 		self.csv = {}
-		self.csv['iter'] = []
+		# self.csv['iter'] = []
 		for feature in self.features:
 			self.csv[feature] = []
 
