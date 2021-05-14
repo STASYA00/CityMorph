@@ -2,11 +2,16 @@
 
 Welcome to the CityMorph project! This is a framework intended for the calculation of urban metrics of a city zone.
 
+<p align="center">
+  <img src="imgs/illustration.gif" width="600"/>
+</p>
+
 The framework evaluates an urban area based on a set of metrics. The building footprints represent *clusters* that grow in size using a defined increment value (1m) for a number of iterations. When two clusters intersect each other in this growth process, a unique cluster is formed from these two. The iterations continue until one unique cluster is formed.
 
 Urban metrics that are currently supported:
 
 * Number of clusters
+* D-limit
 * Total area of all the clusters
 * Total perimeter of all the clusters
 * Distance matrix - a table with the distances between all the clusters pair-wise
@@ -39,7 +44,11 @@ There are two ways of using the script.
 
 ```
 pip install -r requirements.txt
-python run.py PATH_TO_YOUR_SHAPEFILE.shp [--vis]
+python run.py PATH_TO_YOUR_SHAPEFILE.shp PATH_TO_YOUR_GRID_SHAPEFILE [--vis]
+```
+test example:
+```
+python run.py grid_test/A020102_Buildings_Units.shp grid_test/GRID_800-600_MI_COM.shp
 ```
 
 --vis flag activates the visualization function, so that the images on all the iterations are stored to the ```vis``` folder.
